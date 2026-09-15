@@ -1,0 +1,9 @@
+node_modules
+dist
+src-tauri/target/debug
+src-tauri/target/release/build
+src-tauri/target/release/deps
+src-tauri/target/release/examples
+src-tauri/target/release/incremental
+.git
+.gemini

@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    font-size: 15px;
+    font-weight: 400;
+    --bg-main: #f6f6f7;
+    --bg-surface: #ffffff;
+    --bg-card: #ffffff;
+    --border-color: #dcdcdc;
+    --border-subtle: #ebebef;
+    --text-primary: #2e3436;
+    --text-secondary: #5e6369;
+    --accent: #e65100;
+    --accent-hover: #bf360c;
+    --accent-light: #fff3e0;
+    --accent-subtle: #ffe0b2;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: #f6f6f7;
+    color: #2e3436;
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 15px;
+    font-weight: 400;
+    user-select: none;
+    -webkit-user-select: none;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background-color: #f6f6f7;
+  }
+
+  /* 20% less rounded corners on all buttons for crisp native Linux desktop feel */
+  button {
+    border-radius: 6px;
+  }
+  button.rounded-lg, .rounded-lg:is(button) {
+    border-radius: 6px !important;
+  }
+  button.rounded-xl, .rounded-xl:is(button) {
+    border-radius: 9px !important;
+  }
+  button.rounded-2xl, .rounded-2xl:is(button) {
+    border-radius: 12px !important;
+  }
+  button.rounded-full, .rounded-full:is(button) {
+    border-radius: 9999px !important;
+  }
+}
+
+/* Native Linux GTK / Yaru subtle scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c8c8cf;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8b2;
+}
+
+/* High-performance virtualized layout for 2000+ photo collections */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 240px;
+}
+
+

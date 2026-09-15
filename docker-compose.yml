@@ -1,0 +1,19 @@
+services:
+  photocasa:
+    image: ghcr.io/uri-travoski/photocasa:1.1
+    container_name: photocasa
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - TITLE=Photocasa
+    volumes:
+      # Persistent app data (SQLite database, thumbnails, settings)
+      - ./config:/config
+      # Your photos directory
+      - ./photos:/photos
+    ports:
+      # In-browser web desktop access: http://localhost:3000
+      - "3000:3000"
+    shm_size: "1gb"
