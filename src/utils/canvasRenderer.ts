@@ -102,10 +102,10 @@ export function applyPixelFilters(
 
     // Normalizing sliders (-100 to 100 -> normalized float)
     const expVal = adj.exposure || 0;
-    const expFactor = 1 + expVal * 0.0075; // subtle, gradual 0.75% per step
+    const expFactor = 1 + expVal * 0.0085; // smooth, responsive ~0.85% per step
 
     const contrastVal = adj.contrast || 0;
-    const contrastFactor = 1 + contrastVal * 0.005; // 0.5% slope per step
+    const contrastFactor = 1 + contrastVal * 0.006; // clear ~0.6% slope per step
 
     const hlNorm = (adj.highlights || 0) / 100;
     const shNorm = (adj.shadows || 0) / 100;
@@ -113,7 +113,7 @@ export function applyPixelFilters(
     const tintNorm = (adj.tint || 0) / 100;
 
     const satVal = adj.saturation || 0;
-    const satFactor = Math.max(0, 1 + satVal * 0.0075);
+    const satFactor = Math.max(0, 1 + satVal * 0.0085);
     const sepia = (adj.sepia || 0) / 100;
     const isBw = adj.blackAndWhite;
 

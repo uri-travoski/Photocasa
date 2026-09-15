@@ -79,7 +79,7 @@ export const PhotoViewer: React.FC<PhotoViewerProps> = ({
 
       if (!active) return;
       const img = new Image();
-      if (src.startsWith('http://') || src.startsWith('https://')) {
+      if ((src.startsWith('http://') || src.startsWith('https://')) && !src.includes('localhost')) {
         img.crossOrigin = 'anonymous';
       }
       img.src = src;

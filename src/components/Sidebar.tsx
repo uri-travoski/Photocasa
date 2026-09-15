@@ -218,7 +218,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Bottom info */}
       <div className="p-3 border-t border-[#dcdcdc] text-[11px] text-[#62686e] flex items-center justify-between bg-[#f0f1f4]">
-        <span className="font-medium">Photocasa v1.0</span>
+        <span className="font-medium">Photocasa v1.1</span>
         <span className="text-emerald-600 flex items-center gap-1 font-medium">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
           100% Offline

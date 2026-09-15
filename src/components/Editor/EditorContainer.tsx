@@ -155,13 +155,13 @@ export const EditorContainer: React.FC<EditorContainerProps> = ({
     tint: number;
     saturation: number;
   }>({
-    exposure: 18,
-    contrast: 24,
-    highlights: -18,
-    shadows: 32,
-    warmth: 6,
+    exposure: 20,
+    contrast: 26,
+    highlights: -20,
+    shadows: 34,
+    warmth: 8,
     tint: 0,
-    saturation: 22,
+    saturation: 24,
   });
 
   // Compute exact display dimensions of canvas to avoid letterbox gaps and distortion
@@ -214,6 +214,9 @@ export const EditorContainer: React.FC<EditorContainerProps> = ({
   // Load image into memory for real-time canvas processing
   useEffect(() => {
     let active = true;
+    baseAdjRef.current = photo.adjustments || DEFAULT_ADJUSTMENTS;
+    setAutoImproveVal(0);
+
     const loadImage = async () => {
       let src = getPhotoSrc(photo, true);
       // In Tauri, retrieve photo as base64 data URL to completely prevent tainted canvas SecurityError in WebKitGTK
@@ -228,7 +231,7 @@ export const EditorContainer: React.FC<EditorContainerProps> = ({
 
       if (!active) return;
       const img = new Image();
-      if (src.startsWith('http://') || src.startsWith('https://')) {
+      if ((src.startsWith('http://') || src.startsWith('https://')) && !src.includes('localhost')) {
         img.crossOrigin = 'anonymous';
       }
       img.src = src;
@@ -332,29 +335,29 @@ export const EditorContainer: React.FC<EditorContainerProps> = ({
       const p95 = lums[Math.floor(pixelCount * 0.95)];
       const dynamicRange = p95 - p5;
 
-      let targetExp = 18;
+      let targetExp = 20;
       if (avgL < 115) {
-        targetExp = Math.min(28, Math.round((125 - avgL) * 0.40));
+        targetExp = Math.min(30, Math.round((125 - avgL) * 0.45));
       } else if (avgL > 165) {
-        targetExp = Math.max(-16, Math.round((150 - avgL) * 0.32));
+        targetExp = Math.max(-18, Math.round((150 - avgL) * 0.35));
       }
 
-      let targetContrast = 24;
+      let targetContrast = 26;
       if (dynamicRange < 180) {
-        targetContrast = Math.min(32, Math.max(16, Math.round((190 - dynamicRange) * 0.26)));
+        targetContrast = Math.min(34, Math.max(18, Math.round((190 - dynamicRange) * 0.28)));
       }
 
-      let targetShadows = 32;
+      let targetShadows = 34;
       if (p5 < 50) {
-        targetShadows = Math.min(42, Math.max(20, Math.round((60 - p5) * 0.60)));
+        targetShadows = Math.min(44, Math.max(22, Math.round((60 - p5) * 0.65)));
       }
 
-      let targetWarmth = 6;
+      let targetWarmth = 8;
       let targetTint = 0;
       if (avgB > avgR + 8) {
-        targetWarmth = Math.min(16, Math.round((avgB - avgR) * 0.50));
+        targetWarmth = Math.min(18, Math.round((avgB - avgR) * 0.55));
       } else if (avgR > avgB + 15) {
-        targetWarmth = Math.max(-12, Math.round((avgB - avgR) * 0.35));
+        targetWarmth = Math.max(-14, Math.round((avgB - avgR) * 0.40));
       }
 
       if (avgG < (avgR + avgB) / 2 - 8) {
@@ -366,18 +369,26 @@ export const EditorContainer: React.FC<EditorContainerProps> = ({
       autoImproveDeltasRef.current = {
         exposure: targetExp,
         contrast: targetContrast,
-        highlights: -18,
+        highlights: -20,
         shadows: targetShadows,
         warmth: targetWarmth,
         tint: targetTint,
-        saturation: 22,
+        saturation: 24,
       };
     } catch {
-      // ignore
+      autoImproveDeltasRef.current = {
+        exposure: 20,
+        contrast: 26,
+        highlights: -20,
+        shadows: 34,
+        warmth: 8,
+        tint: 0,
+        saturation: 24,
+      };
     }
   };
 
-  // Smooth Auto Improve slider adjustment (0% to 100%)
+  // Smooth Auto Improve slider adjustment (0% to 150%)
   const handleAutoImproveChange = (val: number) => {
     setAutoImproveVal(val);
     const factor = val / 100;
@@ -396,6 +407,7 @@ export const EditorContainer: React.FC<EditorContainerProps> = ({
     };
 
     setAdj(nextAdj);
+    renderCanvas(nextAdj);
   };
 
   // Commit auto-improve slider value to history on release
@@ -416,6 +428,7 @@ export const EditorContainer: React.FC<EditorContainerProps> = ({
     };
 
     setAdj(nextAdj);
+    renderCanvas(nextAdj);
     const newHist = history.slice(0, historyIndex + 1);
     newHist.push(nextAdj);
     setHistory(newHist);
@@ -1162,8 +1175,7 @@ export const EditorContainer: React.FC<EditorContainerProps> = ({
           <div className="p-4 space-y-4 overflow-y-auto flex-1 bg-[#fafafa]">
             {/* TAB 1: BASIC FIXES */}
             {activeTab === 'basic' && (
-              <div className="space-y-4">
-                {/* Auto Improve Slider */}
+              <div className="space-y-4">                {/* Auto Improve Slider (Item #2, 0% to 150%) */}
                 <div className="bg-white p-3.5 rounded-md border border-[#e0e2e6] shadow-xs space-y-2.5">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 text-xs font-semibold text-[#2e3436]">
@@ -1176,7 +1188,10 @@ export const EditorContainer: React.FC<EditorContainerProps> = ({
                       </span>
                       {autoImproveVal > 0 && (
                         <button
-                          onClick={() => handleAutoImproveChange(0)}
+                          onClick={() => {
+                            handleAutoImproveChange(0);
+                            handleAutoImproveCommit(0);
+                          }}
                           className="text-[10px] text-[#8a9199] hover:text-[#e65100] underline font-medium transition-colors"
                           title="Reset Auto Improve to 0%"
                         >
@@ -1188,16 +1203,16 @@ export const EditorContainer: React.FC<EditorContainerProps> = ({
                   <input
                     type="range"
                     min={0}
-                    max={100}
+                    max={150}
                     value={autoImproveVal}
                     onChange={(e) => handleAutoImproveChange(Number(e.target.value))}
                     onPointerUp={(e) => handleAutoImproveCommit(Number((e.target as HTMLInputElement).value))}
                     className="w-full h-1.5 bg-[#e2e4e8] rounded appearance-none cursor-pointer accent-[#e65100]"
                   />
                   <div className="flex justify-between text-[10px] text-[#8a9199] font-mono">
-                    <span>Original</span>
-                    <span>Balanced (50%)</span>
-                    <span>Max</span>
+                    <span>Original (0%)</span>
+                    <span>Standard (100%)</span>
+                    <span>150% Max</span>
                   </div>
                 </div>
 
