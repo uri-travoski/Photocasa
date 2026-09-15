@@ -13,6 +13,7 @@
     "windows": [
       {
         "title": "Photocasa",
+        "url": "index.html",
         "width": 1280,
         "height": 840,
         "minWidth": 900,

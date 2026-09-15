@@ -4,7 +4,7 @@ import {
   Crop, Check, Trash2, Sun, Moon, Type, ArrowRight, RotateCw
 } from 'lucide-react';
 import type { Photo, PhotoAdjustments, PhotoTextItem, PhotoArrowItem } from '../../types';
-import { getPhotoSrc } from '../../utils/api';
+import { getPhotoSrc, apiGetPhotoDataUrl, isTauri } from '../../utils/api';
 import { 
   renderAdjustedCanvas, 
   generateThumbnailDataUrl 
@@ -155,13 +155,13 @@ export const EditorContainer: React.FC<EditorContainerProps> = ({
     tint: number;
     saturation: number;
   }>({
-    exposure: 8,
-    contrast: 14,
-    highlights: -12,
-    shadows: 18,
-    warmth: 4,
+    exposure: 18,
+    contrast: 24,
+    highlights: -18,
+    shadows: 32,
+    warmth: 6,
     tint: 0,
-    saturation: 12,
+    saturation: 22,
   });
 
   // Compute exact display dimensions of canvas to avoid letterbox gaps and distortion
@@ -213,16 +213,39 @@ export const EditorContainer: React.FC<EditorContainerProps> = ({
 
   // Load image into memory for real-time canvas processing
   useEffect(() => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = getPhotoSrc(photo, true);
-    img.onload = () => {
-      originalImageRef.current = img;
-      computeAutoImproveDeltas(img);
-      updateDisplaySize();
-      renderCanvas(adj);
+    let active = true;
+    const loadImage = async () => {
+      let src = getPhotoSrc(photo, true);
+      // In Tauri, retrieve photo as base64 data URL to completely prevent tainted canvas SecurityError in WebKitGTK
+      if (isTauri && photo.id) {
+        try {
+          const dataUrl = await apiGetPhotoDataUrl(photo.id, true);
+          if (dataUrl) src = dataUrl;
+        } catch (e) {
+          console.warn('Failed get_photo_data_url in editor, falling back', e);
+        }
+      }
+
+      if (!active) return;
+      const img = new Image();
+      if (src.startsWith('http://') || src.startsWith('https://')) {
+        img.crossOrigin = 'anonymous';
+      }
+      img.src = src;
+      img.onload = () => {
+        if (!active) return;
+        originalImageRef.current = img;
+        computeAutoImproveDeltas(img);
+        updateDisplaySize();
+        renderCanvas(adj);
+      };
     };
-  }, [photo]);
+
+    loadImage();
+    return () => {
+      active = false;
+    };
+  }, [photo.id, photo.path]);
 
   // Update canvas whenever adjustments, tools or items change
   useEffect(() => {
@@ -309,45 +332,45 @@ export const EditorContainer: React.FC<EditorContainerProps> = ({
       const p95 = lums[Math.floor(pixelCount * 0.95)];
       const dynamicRange = p95 - p5;
 
-      let targetExp = 8;
+      let targetExp = 18;
       if (avgL < 115) {
-        targetExp = Math.min(18, Math.round((120 - avgL) * 0.25));
+        targetExp = Math.min(28, Math.round((125 - avgL) * 0.40));
       } else if (avgL > 165) {
-        targetExp = Math.max(-14, Math.round((155 - avgL) * 0.22));
+        targetExp = Math.max(-16, Math.round((150 - avgL) * 0.32));
       }
 
-      let targetContrast = 14;
+      let targetContrast = 24;
       if (dynamicRange < 180) {
-        targetContrast = Math.min(22, Math.max(10, Math.round((190 - dynamicRange) * 0.18)));
+        targetContrast = Math.min(32, Math.max(16, Math.round((190 - dynamicRange) * 0.26)));
       }
 
-      let targetShadows = 18;
+      let targetShadows = 32;
       if (p5 < 50) {
-        targetShadows = Math.min(28, Math.max(12, Math.round((55 - p5) * 0.45)));
+        targetShadows = Math.min(42, Math.max(20, Math.round((60 - p5) * 0.60)));
       }
 
-      let targetWarmth = 4;
+      let targetWarmth = 6;
       let targetTint = 0;
-      if (avgB > avgR + 10) {
-        targetWarmth = Math.min(12, Math.round((avgB - avgR) * 0.35));
+      if (avgB > avgR + 8) {
+        targetWarmth = Math.min(16, Math.round((avgB - avgR) * 0.50));
       } else if (avgR > avgB + 15) {
-        targetWarmth = Math.max(-10, Math.round((avgB - avgR) * 0.25));
+        targetWarmth = Math.max(-12, Math.round((avgB - avgR) * 0.35));
       }
 
       if (avgG < (avgR + avgB) / 2 - 8) {
-        targetTint = -4;
+        targetTint = -5;
       } else if (avgG > (avgR + avgB) / 2 + 12) {
-        targetTint = 4;
+        targetTint = 5;
       }
 
       autoImproveDeltasRef.current = {
         exposure: targetExp,
         contrast: targetContrast,
-        highlights: -12,
+        highlights: -18,
         shadows: targetShadows,
         warmth: targetWarmth,
         tint: targetTint,
-        saturation: 12,
+        saturation: 22,
       };
     } catch {
       // ignore
@@ -373,6 +396,30 @@ export const EditorContainer: React.FC<EditorContainerProps> = ({
     };
 
     setAdj(nextAdj);
+  };
+
+  // Commit auto-improve slider value to history on release
+  const handleAutoImproveCommit = (val: number) => {
+    const factor = val / 100;
+    const base = baseAdjRef.current;
+    const d = autoImproveDeltasRef.current;
+
+    const nextAdj: PhotoAdjustments = {
+      ...adj,
+      exposure: Math.round(base.exposure + d.exposure * factor),
+      contrast: Math.round(base.contrast + d.contrast * factor),
+      highlights: Math.round(base.highlights + d.highlights * factor),
+      shadows: Math.round(base.shadows + d.shadows * factor),
+      warmth: Math.round(base.warmth + d.warmth * factor),
+      tint: Math.round(base.tint + d.tint * factor),
+      saturation: Math.round(base.saturation + d.saturation * factor),
+    };
+
+    setAdj(nextAdj);
+    const newHist = history.slice(0, historyIndex + 1);
+    newHist.push(nextAdj);
+    setHistory(newHist);
+    setHistoryIndex(newHist.length - 1);
   };
 
   // Canvas rendering pipeline
@@ -1144,6 +1191,7 @@ export const EditorContainer: React.FC<EditorContainerProps> = ({
                     max={100}
                     value={autoImproveVal}
                     onChange={(e) => handleAutoImproveChange(Number(e.target.value))}
+                    onPointerUp={(e) => handleAutoImproveCommit(Number((e.target as HTMLInputElement).value))}
                     className="w-full h-1.5 bg-[#e2e4e8] rounded appearance-none cursor-pointer accent-[#e65100]"
                   />
                   <div className="flex justify-between text-[10px] text-[#8a9199] font-mono">

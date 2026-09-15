@@ -65,13 +65,35 @@ export const PhotoViewer: React.FC<PhotoViewerProps> = ({
   // Render adjusted canvas when activePhoto has edits
   useEffect(() => {
     if (!isEdited) return;
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = getPhotoSrc(activePhoto, true);
-    img.onload = () => {
-      if (canvasRef.current) {
-        renderAdjustedCanvas(canvasRef.current, img, activePhoto.adjustments, undefined, undefined, null, null, true);
+    let active = true;
+    const loadAndRender = async () => {
+      let src = getPhotoSrc(activePhoto, true);
+      if (activePhoto.id) {
+        try {
+          const dataUrl = await apiGetPhotoDataUrl(activePhoto.id, true);
+          if (dataUrl) src = dataUrl;
+        } catch {
+          // ignore
+        }
       }
+
+      if (!active) return;
+      const img = new Image();
+      if (src.startsWith('http://') || src.startsWith('https://')) {
+        img.crossOrigin = 'anonymous';
+      }
+      img.src = src;
+      img.onload = () => {
+        if (!active) return;
+        if (canvasRef.current) {
+          renderAdjustedCanvas(canvasRef.current, img, activePhoto.adjustments, undefined, undefined, null, null, true);
+        }
+      };
+    };
+
+    loadAndRender();
+    return () => {
+      active = false;
     };
   }, [activePhoto, isEdited]);
 
