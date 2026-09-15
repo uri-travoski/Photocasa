@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "tauri": "tauri",
+    "build:appimage": "tauri build -b appimage",
     "lint": "oxlint",
     "preview": "vite preview"
   },
